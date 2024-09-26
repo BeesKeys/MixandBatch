@@ -1,0 +1,13 @@
+ schema_version = "1.0.0"
+
+id = "mix_and_batch"
+version = "2.0.0"
+name = "Mix & Batch"
+tagline = "Mix & Batch - A multitool for batch rendering, material & camera swapping"
+maintainer = "Bees.Keys LTD <beesley@beeskeys.uk>"
+type = "add-on"
+blender_version_min = "4.0.0"
+
+license = [
+  "SPDX:GPL-3.0-or-later",
+]
