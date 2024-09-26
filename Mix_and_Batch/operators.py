@@ -1,6 +1,15 @@
 import bpy
 import os
 import itertools
+import threading
+
+def save_image_in_thread(image_buffer, output_file):
+    """ Save image in a separate thread to avoid blocking Blender """
+    image_buffer.filepath_raw = output_file
+    image_buffer.file_format = 'PNG'
+    image_buffer.save()
+    bpy.data.images.remove(image_buffer)  # Remove buffer after saving
+
 
 class RENDER_OT_BatchRender(bpy.types.Operator):
     bl_idname = "render.batch_render"
@@ -26,6 +35,7 @@ class RENDER_OT_BatchRender(bpy.types.Operator):
 
         material_combinations = list(itertools.product(materials, repeat=len(all_objects)))
         render_counter = 1
+        threads = []  # Track threads
 
         for cam in cameras:
             if cam is None:
@@ -61,28 +71,30 @@ class RENDER_OT_BatchRender(bpy.types.Operator):
                 materials_str = "_".join(item_material_pairs)
                 image_name = f"Render_{camera_name}_{materials_str}_{render_counter}"
 
-                # Set render output to buffer
-                bpy.context.scene.render.filepath = "//" + image_name  # Dummy filepath to keep Blender happy
+                # Set render output to a buffer
+                bpy.context.scene.render.filepath = "//" + image_name  # Dummy path
                 bpy.ops.render.render(write_still=False)
 
-                # Get the rendered image buffer
+                # Get rendered image buffer
                 image_buffer = bpy.data.images['Render Result'].copy()
 
-                # Define the actual file path for saving
+                # Define actual file path for saving
                 output_file = os.path.join(output_dir, f"{camera_name}_{materials_str}.png")
-                
-                # Save the buffer to disk
-                image_buffer.filepath_raw = output_file
-                image_buffer.file_format = 'PNG'
-                image_buffer.save()
 
-                # Remove the buffer to free memory
-                bpy.data.images.remove(image_buffer)
+                # Save image in a separate thread
+                thread = threading.Thread(target=save_image_in_thread, args=(image_buffer, output_file))
+                threads.append(thread)
+                thread.start()
 
                 render_counter += 1
 
+        # Ensure all threads complete
+        for thread in threads:
+            thread.join()
+
         self.report({'INFO'}, "Rendering complete!")
         return {'FINISHED'}
+
 
 
 class RENDER_OT_AddObject(bpy.types.Operator):
