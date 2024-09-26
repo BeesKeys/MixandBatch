@@ -16,7 +16,7 @@ class RENDER_PT_BatchPanel(bpy.types.Panel):
 
         # Objects Section
         layout.label(text="Objects")
-        split = layout.split(factor=0.8)
+        split = layout.split(factor=0.8)  # Adjust the factor to control the width of the list vs the button column
         col_left = split.column()
         col_right = split.column()
 
@@ -57,22 +57,22 @@ class RENDER_PT_BatchPanel(bpy.types.Panel):
         # Render Button
         layout.operator("render.batch_render")
 
-        # Create a box for the warning message
-        box = layout.box()
-        box.label(text="BLENDER WILL FREEZE WHILE RENDERING, SAVE YOUR FILE FIRST, "
-                       "THE ONLY WAY TO CANCEL THE RENDER IS TO FORCE CLOSE BLENDER")
 
-        # Adding spacer to increase the height of the box
-        box.prop(scene, "dummy_prop", text="", icon='NONE', emboss=False)  # Use an empty prop to create space
+class RENDER_UL_ObjectList(bpy.types.UIList):
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+        layout.prop(item, "object", text="")
 
-# Create a dummy property
-def register():
-    bpy.utils.register_class(RENDER_PT_BatchPanel)
-    bpy.types.Scene.dummy_prop = bpy.props.StringProperty(name="Dummy Property")
 
-def unregister():
-    bpy.utils.unregister_class(RENDER_PT_BatchPanel)
-    del bpy.types.Scene.dummy_prop
+class RENDER_UL_MaterialList(bpy.types.UIList):
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+        layout.prop(item, "material", text="")
 
-if __name__ == "__main__":
-    register()
+
+class RENDER_UL_CameraList(bpy.types.UIList):
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+        layout.prop(item, "camera", text="")
+
+
+class RENDER_UL_CollectionList(bpy.types.UIList):
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
+        layout.prop(item, "collection", text="")
