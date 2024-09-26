@@ -59,9 +59,26 @@ class RENDER_OT_BatchRender(bpy.types.Operator):
                         item_material_pairs.append(f"{item.name}-{material.name}")
 
                 materials_str = "_".join(item_material_pairs)
+                image_name = f"Render_{camera_name}_{materials_str}_{render_counter}"
+
+                # Set render output to buffer
+                bpy.context.scene.render.filepath = "//" + image_name  # Dummy filepath to keep Blender happy
+                bpy.ops.render.render(write_still=False)
+
+                # Get the rendered image buffer
+                image_buffer = bpy.data.images['Render Result'].copy()
+
+                # Define the actual file path for saving
                 output_file = os.path.join(output_dir, f"{camera_name}_{materials_str}.png")
-                bpy.context.scene.render.filepath = output_file
-                bpy.ops.render.render(write_still=True)
+                
+                # Save the buffer to disk
+                image_buffer.filepath_raw = output_file
+                image_buffer.file_format = 'PNG'
+                image_buffer.save()
+
+                # Remove the buffer to free memory
+                bpy.data.images.remove(image_buffer)
+
                 render_counter += 1
 
         self.report({'INFO'}, "Rendering complete!")
