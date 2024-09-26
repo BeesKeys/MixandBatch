@@ -5,22 +5,25 @@ import threading
 
 def save_image_in_thread(image_buffer, output_file):
     """ Save image in a separate thread to avoid blocking Blender """
+    print(f"Saving image to {output_file}")
     image_buffer.filepath_raw = output_file
     image_buffer.file_format = 'PNG'
     image_buffer.save()
     bpy.data.images.remove(image_buffer)  # Remove buffer after saving
-
+    print(f"Finished saving image to {output_file}")
 
 class RENDER_OT_BatchRender(bpy.types.Operator):
     bl_idname = "render.batch_render"
     bl_label = "Batch Render"
 
     def execute(self, context):
+        print("Batch render started.")
         scene = context.scene
         render_props = scene.render_properties
         output_dir = render_props.output_dir
 
         if not os.path.exists(output_dir):
+            print(f"Creating output directory: {output_dir}")
             os.makedirs(output_dir)
 
         objects = [item.object for item in render_props.object_list]
@@ -34,6 +37,7 @@ class RENDER_OT_BatchRender(bpy.types.Operator):
             return {'CANCELLED'}
 
         material_combinations = list(itertools.product(materials, repeat=len(all_objects)))
+        print(f"Material combinations: {len(material_combinations)}")
         render_counter = 1
         threads = []  # Track threads
 
@@ -42,15 +46,17 @@ class RENDER_OT_BatchRender(bpy.types.Operator):
                 self.report({'WARNING'}, "Camera not found!")
                 continue
 
+            print(f"Using camera: {cam.name}")
             bpy.context.scene.camera = cam
             camera_name = cam.name
 
             for combination in material_combinations:
+                print(f"Rendering combination {render_counter}...")
                 item_material_pairs = []
 
                 for item, material in zip(all_objects, combination):
                     if item is None or material is None:
-                        self.report({'WARNING'}, "Item or Material not found!")
+                        print("Warning: Item or material is None.")
                         continue
 
                     if isinstance(item, bpy.types.Collection):
@@ -73,10 +79,13 @@ class RENDER_OT_BatchRender(bpy.types.Operator):
 
                 # Set render output to a buffer
                 bpy.context.scene.render.filepath = "//" + image_name  # Dummy path
+                print(f"Rendering image: {image_name}")
                 bpy.ops.render.render(write_still=False)
+                print("Render complete.")
 
                 # Get rendered image buffer
                 image_buffer = bpy.data.images['Render Result'].copy()
+                print("Image buffer copied.")
 
                 # Define actual file path for saving
                 output_file = os.path.join(output_dir, f"{camera_name}_{materials_str}.png")
@@ -85,13 +94,16 @@ class RENDER_OT_BatchRender(bpy.types.Operator):
                 thread = threading.Thread(target=save_image_in_thread, args=(image_buffer, output_file))
                 threads.append(thread)
                 thread.start()
+                print(f"Started thread for saving image: {output_file}")
 
                 render_counter += 1
 
         # Ensure all threads complete
         for thread in threads:
             thread.join()
+            print("Thread finished.")
 
+        print("Batch rendering complete.")
         self.report({'INFO'}, "Rendering complete!")
         return {'FINISHED'}
 
